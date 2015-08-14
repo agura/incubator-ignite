@@ -17,8 +17,10 @@
 
 package org.apache.ignite.internal.jdbc;
 
-import org.apache.ignite.internal.client.*;
-import org.apache.ignite.internal.util.typedef.internal.*;
+import org.apache.ignite.*;
+import org.apache.ignite.cache.query.*;
+import org.apache.ignite.internal.processors.cache.*;
+import org.apache.ignite.internal.processors.query.*;
 
 import java.sql.*;
 import java.util.*;
@@ -77,35 +79,41 @@ public class JdbcStatement implements Statement {
         if (sql == null || sql.isEmpty())
             throw new SQLException("SQL query is empty");
 
+        QueryCursor<List<?>> cursor = null;
+
         try {
-            byte[] packet = conn.client().compute().execute(TASK_NAME,
-                JdbcUtils.marshalArgument(JdbcUtils.taskArgument(conn.nodeId(), conn.cacheName(), sql,
-                    timeout, args, fetchSize, maxRows)));
+            IgniteCache<?, ?> cache = conn.client().cache(conn.cacheName());
 
-            byte status = packet[0];
-            byte[] data = new byte[packet.length - 1];
+            SqlFieldsQuery qry = new SqlFieldsQuery(sql).setArgs(args);
 
-            U.arrayCopy(packet, 1, data, 0, data.length);
+            //TODO: set proper fetch size if maxRows > 0
+            qry.setPageSize(fetchSize);
 
-            if (status == 1)
-                throw JdbcUtils.unmarshalError(data);
-            else {
-                List<?> msg = JdbcUtils.unmarshal(data);
+            cursor = cache.query(qry);
 
-                assert msg.size() == 7;
+            Collection<GridQueryFieldMetadata> meta = ((QueryCursorImpl<List<?>>)cursor).fieldsMeta();
 
-                UUID nodeId = (UUID)msg.get(0);
-                UUID futId = (UUID)msg.get(1);
-                List<String> tbls = (List<String>)msg.get(2);
-                List<String> cols = (List<String>)msg.get(3);
-                List<String> types = (List<String>)msg.get(4);
-                Collection<List<Object>> fields = (Collection<List<Object>>)msg.get(5);
-                boolean finished = (Boolean)msg.get(6);
+            List<String> tbls = new ArrayList<>(meta.size());
+            List<String> cols = new ArrayList<>(meta.size());
+            List<String> types = new ArrayList<>(meta.size());
 
-                return new JdbcResultSet(this, nodeId, futId, tbls, cols, types, fields, finished, fetchSize);
+            for (GridQueryFieldMetadata desc : meta) {
+                tbls.add(desc.typeName());
+                cols.add(desc.fieldName().toUpperCase());
+                types.add(desc.fieldTypeName());
             }
+
+            return new JdbcResultSet(this, tbls, cols, types, fetchSize, cursor);
         }
-        catch (GridClientException e) {
+        catch (IgniteException e) {
+            try {
+                if (cursor != null)
+                    cursor.close();
+            }
+            catch (Exception ignored) {
+                // No-op.
+            }
+
             throw new SQLException("Failed to query Ignite.", e);
         }
     }
@@ -396,6 +404,7 @@ public class JdbcStatement implements Statement {
     }
 
     /** {@inheritDoc} */
+    @SuppressWarnings("unchecked")
     @Override public <T> T unwrap(Class<T> iface) throws SQLException {
         if (!isWrapperFor(iface))
             throw new SQLException("Statement is not a wrapper for " + iface.getName());
@@ -427,13 +436,6 @@ public class JdbcStatement implements Statement {
      */
     void timeout(int timeout) {
         this.timeout = timeout;
-    }
-
-    /**
-     * @return Connection.
-     */
-    JdbcConnection connection() {
-        return conn;
     }
 
     /**

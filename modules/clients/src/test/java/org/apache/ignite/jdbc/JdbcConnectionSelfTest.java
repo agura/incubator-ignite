@@ -18,13 +18,16 @@
 package org.apache.ignite.jdbc;
 
 import org.apache.ignite.configuration.*;
+import org.apache.ignite.internal.jdbc.*;
 import org.apache.ignite.spi.discovery.tcp.*;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.*;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.*;
 import org.apache.ignite.testframework.*;
 import org.apache.ignite.testframework.junits.common.*;
+
 import org.jetbrains.annotations.*;
 
+import java.net.*;
 import java.sql.*;
 import java.util.concurrent.*;
 
@@ -39,13 +42,16 @@ public class JdbcConnectionSelfTest extends GridCommonAbstractTest {
     private static final String CUSTOM_CACHE_NAME = "custom-cache";
 
     /** Custom REST TCP port. */
-    private static final int CUSTOM_PORT = 11212;
+    private static final int CUSTOM_PORT = 47500;
 
     /** URL prefix. */
     private static final String URL_PREFIX = "jdbc:ignite://";
 
     /** Host. */
     private static final String HOST = "127.0.0.1";
+
+    /** Config url. */
+    private static final String CFG_URL = "modules/clients/src/test/config/jdbc-config.xml";
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
@@ -58,15 +64,6 @@ public class JdbcConnectionSelfTest extends GridCommonAbstractTest {
         disco.setIpFinder(IP_FINDER);
 
         cfg.setDiscoverySpi(disco);
-
-        assert cfg.getConnectorConfiguration() == null;
-
-        ConnectorConfiguration clientCfg = new ConnectorConfiguration();
-
-        if (!gridName.endsWith("0"))
-            clientCfg.setPort(CUSTOM_PORT);
-
-        cfg.setConnectorConfiguration(clientCfg);
 
         return cfg;
     }
@@ -102,8 +99,8 @@ public class JdbcConnectionSelfTest extends GridCommonAbstractTest {
     public void testDefaults() throws Exception {
         String url = URL_PREFIX + HOST;
 
-        assert DriverManager.getConnection(url) != null;
-        assert DriverManager.getConnection(url + "/") != null;
+        assertNotNull(DriverManager.getConnection(url));
+        assertNotNull(DriverManager.getConnection(url + "/"));
     }
 
     /**
@@ -112,11 +109,11 @@ public class JdbcConnectionSelfTest extends GridCommonAbstractTest {
     public void testNodeId() throws Exception {
         String url = URL_PREFIX + HOST + "/?nodeId=" + grid(0).localNode().id();
 
-        assert DriverManager.getConnection(url) != null;
+        assertNotNull(DriverManager.getConnection(url));
 
         url = URL_PREFIX + HOST + "/" + CUSTOM_CACHE_NAME + "?nodeId=" + grid(0).localNode().id();
 
-        assert DriverManager.getConnection(url) != null;
+        assertNotNull(DriverManager.getConnection(url));
     }
 
     /**
@@ -125,7 +122,7 @@ public class JdbcConnectionSelfTest extends GridCommonAbstractTest {
     public void testCustomCache() throws Exception {
         String url = URL_PREFIX + HOST + "/" + CUSTOM_CACHE_NAME;
 
-        assert DriverManager.getConnection(url) != null;
+        assertNotNull(DriverManager.getConnection(url));
     }
 
     /**
@@ -134,8 +131,8 @@ public class JdbcConnectionSelfTest extends GridCommonAbstractTest {
     public void testCustomPort() throws Exception {
         String url = URL_PREFIX + HOST + ":" + CUSTOM_PORT;
 
-        assert DriverManager.getConnection(url) != null;
-        assert DriverManager.getConnection(url + "/") != null;
+        assertNotNull(DriverManager.getConnection(url));
+        assertNotNull(DriverManager.getConnection(url + "/"));
     }
 
     /**
@@ -144,7 +141,7 @@ public class JdbcConnectionSelfTest extends GridCommonAbstractTest {
     public void testCustomCacheNameAndPort() throws Exception {
         String url = URL_PREFIX + HOST + ":" + CUSTOM_PORT + "/" + CUSTOM_CACHE_NAME;
 
-        assert DriverManager.getConnection(url) != null;
+        assertNotNull(DriverManager.getConnection(url));
     }
 
     /**
@@ -170,37 +167,63 @@ public class JdbcConnectionSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    public void testWrongPort() throws Exception {
-        final String url = URL_PREFIX + HOST + ":33333";
+    public void testClose() throws Exception {
+        String url = URL_PREFIX + HOST;
+
+        final Connection conn = DriverManager.getConnection(url);
+
+        assertNotNull(conn);
+        assertFalse(conn.isClosed());
+
+        conn.close();
+
+        assertTrue(conn.isClosed());
 
         GridTestUtils.assertThrows(
             log,
             new Callable<Object>() {
                 @Override public Object call() throws Exception {
-                    DriverManager.getConnection(url);
+                    conn.isValid(2);
 
                     return null;
                 }
             },
             SQLException.class,
-            "Failed to establish connection."
+            "Connection is closed."
         );
     }
 
     /**
      * @throws Exception If failed.
      */
-    public void testClose() throws Exception {
-        String url = URL_PREFIX + HOST;
+    public void testConnectWithConfig() throws Exception {
+        int port = 50000;
+
+        String url = URL_PREFIX + HOST + ':' + port + '?' + "cfg" + '=' + URLEncoder.encode(CFG_URL, "UTF-8");
+
+        System.out.println("!!! URL: " + url);
 
         final Connection conn = DriverManager.getConnection(url);
 
-        assert conn != null;
-        assert !conn.isClosed();
+        assertNotNull(conn);
+        assertFalse(conn.isClosed());
+
+        JdbcConnection jdbcConn = (JdbcConnection) conn;
+
+        TcpDiscoverySpi discoSpi = (TcpDiscoverySpi)jdbcConn.client().configuration().getDiscoverySpi();
+
+        TcpDiscoveryVmIpFinder ipFinder = (TcpDiscoveryVmIpFinder)discoSpi.getIpFinder();
+
+        boolean containsPort = false;
+
+        for (InetSocketAddress address : ipFinder.getRegisteredAddresses())
+            containsPort |= (address.getPort() == port && address.getAddress().getHostAddress().equals(HOST));
+
+        assertTrue(containsPort);
 
         conn.close();
 
-        assert conn.isClosed();
+        assertTrue(conn.isClosed());
 
         GridTestUtils.assertThrows(
             log,

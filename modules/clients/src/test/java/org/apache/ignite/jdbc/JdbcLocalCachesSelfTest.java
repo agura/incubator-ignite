@@ -27,7 +27,6 @@ import org.apache.ignite.testframework.junits.common.*;
 import java.sql.*;
 import java.util.*;
 
-import static org.apache.ignite.IgniteJdbcDriver.*;
 import static org.apache.ignite.cache.CacheMode.*;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.*;
 
@@ -38,6 +37,9 @@ public class JdbcLocalCachesSelfTest extends GridCommonAbstractTest {
     /** IP finder. */
     private static final TcpDiscoveryIpFinder IP_FINDER = new TcpDiscoveryVmIpFinder(true);
 
+    /** Property node id. */
+    private static final String PROP_NODE_ID = "not_used";
+
     /** Cache name. */
     private static final String CACHE_NAME = "cache";
 
@@ -45,6 +47,7 @@ public class JdbcLocalCachesSelfTest extends GridCommonAbstractTest {
     private static final String URL = "jdbc:ignite://127.0.0.1/" + CACHE_NAME;
 
     /** {@inheritDoc} */
+    @SuppressWarnings("unchecked")
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 

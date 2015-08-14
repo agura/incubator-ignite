@@ -17,8 +17,22 @@
 
 package org.apache.ignite.internal.jdbc;
 
-import org.apache.ignite.internal.client.*;
+import org.apache.ignite.*;
+import org.apache.ignite.compute.*;
+import org.apache.ignite.configuration.*;
+import org.apache.ignite.internal.*;
+import org.apache.ignite.internal.processors.resource.*;
+import org.apache.ignite.internal.util.typedef.*;
+import org.apache.ignite.lang.*;
+import org.apache.ignite.spi.discovery.*;
+import org.apache.ignite.spi.discovery.tcp.*;
+import org.apache.ignite.spi.discovery.tcp.ipfinder.*;
+import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.*;
 
+import org.jetbrains.annotations.*;
+
+import java.io.*;
+import java.net.*;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -36,7 +50,7 @@ public class JdbcConnection implements Connection {
         "org.apache.ignite.internal.processors.cache.query.jdbc.GridCacheQueryJdbcValidationTask";
 
     /** Ignite client. */
-    private final GridClient client;
+    private final Ignite client;
 
     /** Cache name. */
     private String cacheName;
@@ -46,9 +60,6 @@ public class JdbcConnection implements Connection {
 
     /** URL. */
     private String url;
-
-    /** Node ID. */
-    private UUID nodeId;
 
     /** Timeout. */
     private int timeout;
@@ -67,30 +78,81 @@ public class JdbcConnection implements Connection {
         this.url = url;
         cacheName = props.getProperty(PROP_CACHE);
 
-        String nodeIdProp = props.getProperty(PROP_NODE_ID);
-
-        if (nodeIdProp != null)
-            nodeId = UUID.fromString(nodeIdProp);
+        String cfgUrl = props.getProperty(PROP_CFG);
 
         try {
-            GridClientConfiguration cfg = new GridClientConfiguration(props);
-
-            cfg.setServers(Collections.singleton(props.getProperty(PROP_HOST) + ":" + props.getProperty(PROP_PORT)));
-
-            // Disable all fetching and caching for metadata.
-            cfg.setEnableMetricsCache(false);
-            cfg.setEnableAttributesCache(false);
-            cfg.setAutoFetchMetrics(false);
-            cfg.setAutoFetchAttributes(false);
-
-            client = GridClientFactory.start(cfg);
+            client = Ignition.start(cfgUrl == null ? defaultConfiguration(props) : loadConfiguration(cfgUrl, props));
         }
-        catch (GridClientException e) {
+        catch (IgniteException e) {
             throw new SQLException("Failed to start Ignite client.", e);
         }
 
         if (!isValid(2))
             throw new SQLException("Client is invalid. Probably cache name is wrong.");
+    }
+
+    /**
+     * @param cfgUrl Config URL.
+     */
+    private IgniteConfiguration loadConfiguration(String cfgUrl, Properties props) {
+        try {
+            IgniteBiTuple<Collection<IgniteConfiguration>, ? extends GridSpringResourceContext> cfgMap =
+                IgnitionEx.loadConfigurations(URLDecoder.decode(cfgUrl, "UTF-8"));
+
+            IgniteConfiguration cfg = F.first(cfgMap.get1());
+
+            DiscoverySpi discoSpi = cfg.getDiscoverySpi();
+
+            if (discoSpi instanceof TcpDiscoverySpi) {
+                TcpDiscoverySpi tcpDiscoSpi = (TcpDiscoverySpi)discoSpi;
+
+                TcpDiscoveryIpFinder ipFinder = tcpDiscoSpi.getIpFinder();
+
+                if (ipFinder instanceof TcpDiscoveryVmIpFinder) {
+                    TcpDiscoveryVmIpFinder ipVmFinder = (TcpDiscoveryVmIpFinder)ipFinder;
+
+                    Set<InetSocketAddress> addrs = new HashSet<>(ipVmFinder.getRegisteredAddresses());
+
+                    ipVmFinder.setAddresses(
+                        Collections.singleton(props.getProperty(PROP_HOST) + ':' + props.getProperty(PROP_PORT)));
+
+                    addrs.addAll(ipVmFinder.getRegisteredAddresses());
+
+                    ipVmFinder.registerAddresses(addrs);
+                }
+            }
+
+            return cfg;
+        }
+        catch (IgniteCheckedException | UnsupportedEncodingException e) {
+            throw new IgniteException(e);
+        }
+    }
+
+    /**
+     * @param props Properties.
+     */
+    @NotNull private IgniteConfiguration defaultConfiguration(Properties props) {
+        IgniteConfiguration cfg = new IgniteConfiguration();
+
+        cfg.setGridName("ignite-jdbc-driver-" + UUID.randomUUID().toString());
+
+        cfg.setClientMode(true);
+
+        TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder(true);
+
+        ipFinder.setAddresses(
+            Collections.singleton(props.getProperty(PROP_HOST) + ':' + props.getProperty(PROP_PORT)));
+
+        TcpDiscoverySpi discoSpi = new TcpDiscoverySpi();
+
+        discoSpi.setIpFinder(ipFinder);
+
+        cfg.setDiscoverySpi(discoSpi);
+
+        cfg.setPeerClassLoadingEnabled(true);
+
+        return cfg;
     }
 
     /** {@inheritDoc} */
@@ -155,7 +217,7 @@ public class JdbcConnection implements Connection {
 
         closed = true;
 
-        GridClientFactory.stop(client.id(), false);
+        client.close();
     }
 
     /** {@inheritDoc} */
@@ -410,12 +472,16 @@ public class JdbcConnection implements Connection {
             throw new SQLException("Invalid timeout: " + timeout);
 
         try {
-            return client.compute().<Boolean>executeAsync(VALID_TASK_NAME, cacheName).get(timeout, SECONDS);
+            IgniteCompute compute = client.compute().withAsync();
+
+            compute.execute(VALID_TASK_NAME, cacheName);
+
+            return compute.<Boolean>future().get(timeout, SECONDS);
         }
-        catch (GridClientDisconnectedException | GridClientFutureTimeoutException e) {
+        catch (IgniteClientDisconnectedException | ComputeTaskTimeoutException e) {
             throw new SQLException("Failed to establish connection.", e);
         }
-        catch (GridClientException ignored) {
+        catch (IgniteException ignored) {
             return false;
         }
     }
@@ -459,6 +525,7 @@ public class JdbcConnection implements Connection {
     }
 
     /** {@inheritDoc} */
+    @SuppressWarnings("unchecked")
     @Override public <T> T unwrap(Class<T> iface) throws SQLException {
         if (!isWrapperFor(iface))
             throw new SQLException("Connection is not a wrapper for " + iface.getName());
@@ -502,7 +569,7 @@ public class JdbcConnection implements Connection {
     /**
      * @return Ignite client.
      */
-    GridClient client() {
+    public Ignite client() {
         return client;
     }
 
@@ -518,13 +585,6 @@ public class JdbcConnection implements Connection {
      */
     String url() {
         return url;
-    }
-
-    /**
-     * @return Node ID.
-     */
-    UUID nodeId() {
-        return nodeId;
     }
 
     /**
