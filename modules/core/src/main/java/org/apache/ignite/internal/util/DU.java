@@ -26,10 +26,16 @@ import org.apache.ignite.internal.util.typedef.T6;
 public class DU {
     private static final AtomicLong OP_SEQ_NUM = new AtomicLong();
 
+    private static final Object[] NO_ARGS = new Object[] {};
+
     public static final Queue<T6<Long, Long, Long, String, Object[], StackTraceElement[]>> OPS =
         new ConcurrentLinkedQueue<>();
 
-    public static long op(Object... args) {
+    public static long op() {
+        return doOp(null, NO_ARGS);
+    }
+
+    public static long op(Object[] args) {
         return doOp(null, args);
     }
 
