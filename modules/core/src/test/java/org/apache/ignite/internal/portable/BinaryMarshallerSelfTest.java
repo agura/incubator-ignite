@@ -76,7 +76,6 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jsr166.ConcurrentHashMap8;
-import sun.misc.Unsafe;
 
 import static org.apache.ignite.internal.portable.streams.PortableMemoryAllocator.INSTANCE;
 import static org.junit.Assert.assertArrayEquals;
@@ -86,12 +85,6 @@ import static org.junit.Assert.assertArrayEquals;
  */
 @SuppressWarnings({"OverlyStrongTypeCast", "ArrayHashCode", "ConstantConditions"})
 public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
-    /** */
-    private static final Unsafe UNSAFE = GridUnsafe.unsafe();
-
-    /** */
-    protected static final long BYTE_ARR_OFF = UNSAFE.arrayBaseOffset(byte[].class);
-
     /**
      * @throws Exception If failed.
      */
@@ -1958,13 +1951,13 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
             assertFalse(offheapObj2.equals(offheapObj));
         }
         finally {
-            UNSAFE.freeMemory(ptr);
+            GridUnsafe.freeMemory(ptr);
 
             if (ptr1 > 0)
-                UNSAFE.freeMemory(ptr1);
+                GridUnsafe.freeMemory(ptr1);
 
             if (ptr2 > 0)
-                UNSAFE.freeMemory(ptr2);
+                GridUnsafe.freeMemory(ptr2);
         }
     }
 
@@ -2325,9 +2318,9 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
     private long copyOffheap(BinaryObjectImpl obj) {
         byte[] arr = obj.array();
 
-        long ptr = UNSAFE.allocateMemory(arr.length);
+        long ptr = GridUnsafe.allocateMemory(arr.length);
 
-        UNSAFE.copyMemory(arr, BYTE_ARR_OFF, null, ptr, arr.length);
+        GridUnsafe.copyMemory(arr, GridUnsafe.BYTE_ARR_OFF, null, ptr, arr.length);
 
         return ptr;
     }

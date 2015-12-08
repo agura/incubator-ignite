@@ -17,6 +17,16 @@
 
 package org.apache.ignite.internal.portable;
 
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.sql.Timestamp;
+import java.util.Date;
+import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectException;
@@ -29,18 +39,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
-import sun.misc.Unsafe;
-
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.sql.Timestamp;
-import java.util.Date;
-import java.util.UUID;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.internal.portable.GridPortableMarshaller.BOOLEAN;
@@ -64,9 +62,6 @@ import static org.apache.ignite.internal.portable.GridPortableMarshaller.UUID;
 public class BinaryObjectOffheapImpl extends BinaryObjectExImpl implements Externalizable, CacheObject {
     /** */
     private static final long serialVersionUID = 0L;
-
-    /** */
-    private static final Unsafe UNSAFE = GridUnsafe.unsafe();
 
     /** */
     private final PortableContext ctx;
@@ -109,22 +104,22 @@ public class BinaryObjectOffheapImpl extends BinaryObjectExImpl implements Exter
 
     /** {@inheritDoc} */
     @Override public int typeId() {
-        return UNSAFE.getInt(ptr + start + GridPortableMarshaller.TYPE_ID_POS);
+        return GridUnsafe.getInt(ptr + start + GridPortableMarshaller.TYPE_ID_POS);
     }
 
     /** {@inheritDoc} */
     @Override public int length() {
-        return UNSAFE.getInt(ptr + start + GridPortableMarshaller.TOTAL_LEN_POS);
+        return GridUnsafe.getInt(ptr + start + GridPortableMarshaller.TOTAL_LEN_POS);
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        return UNSAFE.getInt(ptr + start + GridPortableMarshaller.HASH_CODE_POS);
+        return GridUnsafe.getInt(ptr + start + GridPortableMarshaller.HASH_CODE_POS);
     }
 
     /** {@inheritDoc} */
     @Override protected int schemaId() {
-        return UNSAFE.getInt(ptr + start + GridPortableMarshaller.SCHEMA_ID_POS);
+        return GridUnsafe.getInt(ptr + start + GridPortableMarshaller.SCHEMA_ID_POS);
     }
 
     /** {@inheritDoc} */
