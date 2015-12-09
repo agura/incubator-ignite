@@ -72,6 +72,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param off Offset.
+     * @return Boolean value from object field.
      */
     public static boolean getBoolean(Object obj, long off) {
         return UNSAFE.getBoolean(obj, off);
@@ -93,6 +94,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param off Offset.
+     * @return Byte value from object field.
      */
     public static byte getByte(Object obj, long off) {
         return UNSAFE.getByte(obj, off);
@@ -114,6 +116,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param off Offset.
+     * @return Short value from object field.
      */
     public static short getShort(Object obj, long off) {
         return UNSAFE.getShort(obj, off);
@@ -135,6 +138,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param off Offset.
+     * @return Char value from object field.
      */
     public static char getChar(Object obj, long off) {
         return UNSAFE.getChar(obj, off);
@@ -156,6 +160,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param off Offset.
+     * @return Integer value from object field.
      */
     public static int getInt(Object obj, long off) {
         return UNSAFE.getInt(obj, off);
@@ -177,6 +182,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param off Offset.
+     * @return Long value from object field.
      */
     public static long getLong(Object obj, long off) {
         return UNSAFE.getLong(obj, off);
@@ -198,6 +204,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param off Offset.
+     * @return Float value from object field.
      */
     public static float getFloat(Object obj, long off) {
         return UNSAFE.getFloat(obj, off);
@@ -219,6 +226,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param off Offset.
+     * @return Double value from object field.
      */
     public static double getDouble(Object obj, long off) {
         return UNSAFE.getDouble(obj, off);
@@ -240,6 +248,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param off Offset.
+     * @return Reference from object field.
      */
     public static Object getObject(Object obj, long off) {
         return UNSAFE.getObject(obj, off);
@@ -261,6 +270,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param off Address.
+     * @return Short value from object field.
      */
     public static short getShortAligned(Object obj, long off) {
         return UNALIGNED ? UNSAFE.getShort(obj, off) : getShortByByte(obj, off);
@@ -285,6 +295,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param off Offset.
+     * @return Char value from object field.
      */
     public static char getCharAligned(Object obj, long off) {
         if (UNALIGNED)
@@ -312,6 +323,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param addr Address.
+     * @return Integer value from object field.
      */
     public static int getIntAligned(Object obj, long addr) {
         return UNALIGNED ? UNSAFE.getInt(obj, addr) : getIntByByte(obj, addr);
@@ -336,6 +348,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param addr Address.
+     * @return Long value from object field.
      */
     public static long getLongAligned(Object obj, long addr) {
         return UNALIGNED ? UNSAFE.getLong(obj, addr) : getLongByByte(obj, addr);
@@ -360,6 +373,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param off Offset.
+     * @return Float value from object field.
      */
     public static float getFloatAligned(Object obj, long off) {
         return UNALIGNED ? UNSAFE.getFloat(obj, off) : Float.intBitsToFloat(getIntByByte(obj, off));
@@ -384,6 +398,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param off Offset.
+     * @return Double value from object field. Alignment aware.
      */
     public static double getDoubleAligned(Object obj, long off) {
         return UNALIGNED ? UNSAFE.getDouble(obj, off) : Double.longBitsToDouble(getLongByByte(obj, off));
@@ -407,6 +422,7 @@ public abstract class GridUnsafe {
      * Gets byte value from given address.
      *
      * @param addr Address.
+     * @return Byte value from given address.
      */
     public static byte getByte(long addr) {
         return UNSAFE.getByte(addr);
@@ -426,6 +442,7 @@ public abstract class GridUnsafe {
      * Gets short value from given address. Alignment aware.
      *
      * @param addr Address.
+     * @return Short value from given address.
      */
     public static short getShort(long addr) {
         return UNALIGNED ? UNSAFE.getShort(addr) : getShortByByte(addr);
@@ -448,6 +465,7 @@ public abstract class GridUnsafe {
      * Gets char value from given address. Alignment aware.
      *
      * @param addr Address.
+     * @return Char value from given address.
      */
     public static char getChar(long addr) {
         return UNALIGNED ? UNSAFE.getChar(addr) : getCharByByte(addr);
@@ -470,6 +488,7 @@ public abstract class GridUnsafe {
      * Gets integer value from given address. Alignment aware.
      *
      * @param addr Address.
+     * @return Integer value from given address.
      */
     public static int getInt(long addr) {
         return UNALIGNED ? UNSAFE.getInt(addr) : getIntByByte(addr);
@@ -492,6 +511,7 @@ public abstract class GridUnsafe {
      * Gets long value from given address. Alignment aware.
      *
      * @param addr Address.
+     * @return Long value from given address.
      */
     public static long getLong(long addr) {
         return UNALIGNED ? UNSAFE.getLong(addr) : getLongByByte(addr);
@@ -514,6 +534,7 @@ public abstract class GridUnsafe {
      * Gets float value from given address. Alignment aware.
      *
      * @param addr Address.
+     * @return Float value from given address.
      */
     public static float getFloat(long addr) {
         return UNALIGNED ? UNSAFE.getFloat(addr) : Float.intBitsToFloat(getIntByByte(addr));
@@ -536,6 +557,7 @@ public abstract class GridUnsafe {
      * Gets double value from given address. Alignment aware.
      *
      * @param addr Address.
+     * @return Double value from given address.
      */
     public static double getDouble(long addr) {
         return UNALIGNED ? UNSAFE.getDouble(addr) : Double.longBitsToDouble(getLongByByte(addr));
@@ -558,6 +580,7 @@ public abstract class GridUnsafe {
      * Returns static field offset.
      *
      * @param field Field.
+     * @return Static field offset.
      */
     public static long staticFieldOffset(Field field) {
         return UNSAFE.staticFieldOffset(field);
@@ -567,6 +590,7 @@ public abstract class GridUnsafe {
      * Returns object field offset.
      *
      * @param field Field.
+     * @return Object field offset.
      */
     public static long objectFieldOffset(Field field) {
         return UNSAFE.objectFieldOffset(field);
@@ -576,6 +600,7 @@ public abstract class GridUnsafe {
      * Returns static field base.
      *
      * @param field Field.
+     * @return Static field base.
      */
     public static Object staticFieldBase(Field field) {
         return UNSAFE.staticFieldBase(field);
@@ -596,6 +621,7 @@ public abstract class GridUnsafe {
      *
      * @param addr Address.
      * @param len Length.
+     * @return address.
      */
     public static long reallocateMemory(long addr, long len) {
         return UNSAFE.reallocateMemory(addr, len);
@@ -659,6 +685,7 @@ public abstract class GridUnsafe {
      * Allocates instance of given class.
      *
      * @param cls Class.
+     * @return Allocated instance.
      */
     public static Object allocateInstance(Class cls) throws InstantiationException {
         return UNSAFE.allocateInstance(cls);
@@ -689,6 +716,7 @@ public abstract class GridUnsafe {
      * @param off Offset.
      * @param exp Expected.
      * @param upd Upd.
+     * @return {@code True} if operation completed successfully, {@code false} - otherwise.
      */
     public static boolean compareAndSwapInt(Object obj, long off, int exp, int upd) {
         return UNSAFE.compareAndSwapInt(obj, off, exp, upd);
@@ -701,6 +729,7 @@ public abstract class GridUnsafe {
      * @param off Offset.
      * @param exp Expected.
      * @param upd Upd.
+     * @return {@code True} if operation completed successfully, {@code false} - otherwise.
      */
     public static boolean compareAndSwapLong(Object obj, long off, long exp, long upd) {
         return UNSAFE.compareAndSwapLong(obj, off, exp, upd);
@@ -711,6 +740,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param off Offset.
+     * @return Byte value.
      */
     public static byte getByteVolatile(Object obj, long off) {
         return UNSAFE.getByteVolatile(obj, off);
@@ -732,6 +762,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param off Offset.
+     * @return Integer value.
      */
     public static int getIntVolatile(Object obj, long off) {
         return UNSAFE.getIntVolatile(obj, off);
@@ -753,6 +784,7 @@ public abstract class GridUnsafe {
      *
      * @param obj Object.
      * @param off Offset.
+     * @return Long value.
      */
     public static long getLongVolatile(Object obj, long off) {
         return UNSAFE.getLongVolatile(obj, off);
