@@ -55,6 +55,7 @@ import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.compute.ComputeJobResultPolicy.WAIT;
 
@@ -74,6 +75,7 @@ public class GridCacheQueryJdbcTask extends ComputeTaskAdapter<byte[], byte[]> {
     /** Scheduler. */
     private static final ScheduledExecutorService SCHEDULER = Executors.newScheduledThreadPool(1);
 
+    /** Ignite. */
     @IgniteInstanceResource
     private Ignite ignite;
 
@@ -95,28 +97,64 @@ public class GridCacheQueryJdbcTask extends ComputeTaskAdapter<byte[], byte[]> {
             }
 
             if (nodeId != null) {
-                for (ClusterNode n : subgrid)
-                    if (n.id().equals(nodeId))
+                for (ClusterNode n : subgrid) {
+                    if (n.id().equals(nodeId)) {
+                        args.put("loc", true);
+
                         return F.asMap(new JdbcDriverJob(args, first), n);
+                    }
+                }
 
                 throw new IgniteException("Node doesn't exist or left the grid: " + nodeId);
             }
             else {
+                args.put("loc", false);
+
                 String cache = (String)args.get("cache");
 
-                GridDiscoveryManager discoMgr = ((IgniteKernal)ignite).context().discovery();
+                Map<? extends ComputeJob, ClusterNode> node = mapToNode(subgrid, args, first, cache);
 
-                for (ClusterNode n : subgrid) {
-                    if (discoMgr.cacheAffinityNode(n, cache))
-                        return F.asMap(new JdbcDriverJob(args, first), n);
+                if (node == null && cache == null) {
+                    IgniteCache<?, ?> cache0 = ((IgniteKernal)ignite).context().cache().getOrStartPublicCache(false);
+
+                    if (cache0 != null)
+                        node = mapToNode(subgrid, args, first, cache0.getName());
                 }
 
-                throw new IgniteException("Can't find node with cache: " + cache);
+                if (node != null)
+                    return node;
+                else
+                    throw new IgniteException("Can't find node with cache: " + cache);
             }
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
         }
+    }
+
+    /**
+     * @param subgrid Subgrid.
+     * @param args Args.
+     * @param first First.
+     * @param cache Cache.
+     */
+    @Nullable private Map<? extends ComputeJob, ClusterNode> mapToNode(
+        List<ClusterNode> subgrid,
+        Map<String, Object> args,
+        boolean first,
+        String cache
+    ) {
+        GridDiscoveryManager discoMgr = ((IgniteKernal)ignite).context().discovery();
+
+        for (ClusterNode n : subgrid) {
+            if (discoMgr.cacheAffinityNode(n, cache)) {
+                args.put("cache", cache);
+
+                return F.asMap(new JdbcDriverJob(args, first), n);
+            }
+        }
+
+        return null;
     }
 
     /** {@inheritDoc} */
@@ -183,7 +221,7 @@ public class GridCacheQueryJdbcTask extends ComputeTaskAdapter<byte[], byte[]> {
          */
         JdbcDriverJob(Map<String, Object> args, boolean first) {
             assert args != null;
-            assert args.size() == (first ? 6 : 3);
+            assert args.size() == (first ? 7 : 3);
 
             this.args = args;
             this.first = first;
@@ -193,6 +231,7 @@ public class GridCacheQueryJdbcTask extends ComputeTaskAdapter<byte[], byte[]> {
         @Override public Object execute() {
             String cacheName = argument("cache");
             String sql = argument("sql");
+            Boolean loc = argument("loc");
             Long timeout = argument("timeout");
             List<Object> args = argument("args");
             UUID futId = argument("futId");
@@ -214,6 +253,19 @@ public class GridCacheQueryJdbcTask extends ComputeTaskAdapter<byte[], byte[]> {
                 assert futId == null;
 
                 IgniteCache<?, ?> cache = ignite.cache(cacheName);
+
+                // if loc != true then suitable cache was created on initial node
+                if (cache == null && cacheName == null && Boolean.TRUE.equals(loc)) {
+                    try {
+                        cache = ((IgniteKernal)ignite).context().cache().getOrStartPublicCache(true);
+                    }
+                    catch (IgniteCheckedException e) {
+                        throw new IgniteException(e);
+                    }
+                }
+
+                if (cache == null)
+                    throw new IgniteException(new SQLException("Failed to execute query. No suitable caches found."));
 
                 SqlFieldsQuery qry = new SqlFieldsQuery(sql).setArgs(args.toArray());
 

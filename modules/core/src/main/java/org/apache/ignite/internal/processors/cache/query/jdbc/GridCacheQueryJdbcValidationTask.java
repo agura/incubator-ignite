@@ -48,6 +48,9 @@ public class GridCacheQueryJdbcValidationTask extends ComputeTaskSplitAdapter<St
             private Ignite ignite;
 
             @Override public Object execute() {
+                if (cacheName == null)
+                    return true;
+
                 GridDiscoveryManager discoMgr = ((IgniteKernal)ignite).context().discovery();
 
                 for (ClusterNode n : ignite.cluster().nodes())
