@@ -99,7 +99,7 @@ public class GridCacheQueryJdbcTask extends ComputeTaskAdapter<byte[], byte[]> {
             if (nodeId != null) {
                 for (ClusterNode n : subgrid) {
                     if (n.id().equals(nodeId)) {
-                        args.put("loc", true);
+                        args.put("loc", false);
 
                         return F.asMap(new JdbcDriverJob(args, first), n);
                     }
@@ -108,14 +108,14 @@ public class GridCacheQueryJdbcTask extends ComputeTaskAdapter<byte[], byte[]> {
                 throw new IgniteException("Node doesn't exist or left the grid: " + nodeId);
             }
             else {
-                args.put("loc", false);
+                args.put("loc", true);
 
                 String cache = (String)args.get("cache");
 
                 Map<? extends ComputeJob, ClusterNode> node = mapToNode(subgrid, args, first, cache);
 
                 if (node == null && cache == null) {
-                    IgniteCache<?, ?> cache0 = ((IgniteKernal)ignite).context().cache().getOrStartPublicCache(false);
+                    IgniteCache<?, ?> cache0 = ((IgniteKernal)ignite).context().cache().getOrStartPublicCache();
 
                     if (cache0 != null)
                         node = mapToNode(subgrid, args, first, cache0.getName());
@@ -254,10 +254,10 @@ public class GridCacheQueryJdbcTask extends ComputeTaskAdapter<byte[], byte[]> {
 
                 IgniteCache<?, ?> cache = ignite.cache(cacheName);
 
-                // if loc != true then suitable cache was created on initial node
+                // if loc == false then suitable cache was created on initial node
                 if (cache == null && cacheName == null && Boolean.TRUE.equals(loc)) {
                     try {
-                        cache = ((IgniteKernal)ignite).context().cache().getOrStartPublicCache(true);
+                        cache = ((IgniteKernal)ignite).context().cache().getOrStartPublicCache();
                     }
                     catch (IgniteCheckedException e) {
                         throw new IgniteException(e);
@@ -265,7 +265,7 @@ public class GridCacheQueryJdbcTask extends ComputeTaskAdapter<byte[], byte[]> {
                 }
 
                 if (cache == null)
-                    throw new IgniteException(new SQLException("Failed to execute query. No suitable caches found."));
+                    throw new IgniteException(new SQLException("Cache not found [cacheName=" + cacheName + ']'));
 
                 SqlFieldsQuery qry = new SqlFieldsQuery(sql).setArgs(args.toArray());
 

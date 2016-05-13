@@ -129,11 +129,15 @@ class JdbcQueryTask implements IgniteCallable<JdbcQueryTask.QueryResult> {
         if (first = (cursor == null)) {
             IgniteCache<?, ?> cache = ignite.cache(cacheName);
 
-            if (cache == null && cacheName == null)
-                cache = ((IgniteKernal)ignite).context().cache().getOrStartPublicCache(!loc);
+            if (cache == null && cacheName == null && loc)
+                cache = ((IgniteKernal)ignite).context().cache().getOrStartPublicCache();
 
-            if (cache == null)
-                throw new SQLException("Failed to execute query. No suitable caches found.");
+            if (cache == null) {
+                if (loc)
+                    throw new SQLException("Failed to execute query. No suitable caches found.");
+                else
+                    throw new SQLException("Cache not found [cacheName=" + cacheName + ']');
+            }
 
             SqlFieldsQuery qry = new SqlFieldsQuery(sql).setArgs(args);
 
