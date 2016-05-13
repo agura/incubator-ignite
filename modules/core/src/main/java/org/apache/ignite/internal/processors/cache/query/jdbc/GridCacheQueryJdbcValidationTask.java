@@ -29,26 +29,29 @@ import org.apache.ignite.compute.ComputeTaskSplitAdapter;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Task to validate connection. Checks that cache with provided name exists in grid.
  */
-public class GridCacheQueryJdbcValidationTask extends ComputeTaskSplitAdapter<String, Boolean> {
+public class GridCacheQueryJdbcValidationTask extends ComputeTaskSplitAdapter<T2<String, Boolean>, Boolean> {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
-    @Override protected Collection<? extends ComputeJob> split(int gridSize,
-        @Nullable final String cacheName) {
+    @Override protected Collection<? extends ComputeJob> split(int gridSize, final T2<String, Boolean> args) {
         // Register big data usage.
         return Collections.singleton(new ComputeJobAdapter() {
             @IgniteInstanceResource
             private Ignite ignite;
 
             @Override public Object execute() {
-                if (cacheName == null)
+                String cacheName = args.get1();
+                boolean loc = args.get2();
+
+                if (cacheName == null && loc)
                     return true;
 
                 GridDiscoveryManager discoMgr = ((IgniteKernal)ignite).context().discovery();

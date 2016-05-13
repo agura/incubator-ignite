@@ -43,8 +43,10 @@ import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientDisconnectedException;
 import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.client.GridClientFactory;
+import org.apache.ignite.internal.client.GridClientFuture;
 import org.apache.ignite.internal.client.GridClientFutureTimeoutException;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.apache.ignite.plugin.security.SecurityCredentialsBasicProvider;
 
@@ -453,7 +455,10 @@ public class JdbcConnection implements Connection {
             throw new SQLException("Invalid timeout: " + timeout);
 
         try {
-            return client.compute().<Boolean>executeAsync(VALID_TASK_NAME, cacheName).get(timeout, SECONDS);
+            GridClientFuture<Boolean> fut =
+                client.compute().executeAsync(VALID_TASK_NAME, new T2<>(cacheName, nodeId == null));
+
+            return fut.get(timeout, SECONDS);
         }
         catch (GridClientDisconnectedException | GridClientFutureTimeoutException e) {
             throw new SQLException("Failed to establish connection.", e);
