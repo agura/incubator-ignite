@@ -156,6 +156,8 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
 
         SSLEngine engine = sslCtx.createSSLEngine();
 
+        boolean clientMode = !ses.accepted();
+
         engine.setUseClientMode(clientMode);
 
         if (!clientMode) {
