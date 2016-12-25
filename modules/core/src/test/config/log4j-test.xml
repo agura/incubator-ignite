@@ -90,11 +90,21 @@
     </category>
     -->
 
-    <!-- Enable Ignite debugging.
+<!--
+     Enable Ignite debugging.
      <category name="org.apache.ignite">
          <level value="DEBUG"/>
      </category>
-    -->
+-->
+
+    <category name="org.apache.ignite.spi.communication">
+        <level value="DEBUG"/>
+    </category>
+
+    <category name="org.apache.ignite.internal.util.nio">
+        <level value="DEBUG"/>
+    </category>
+
 
     <!--
     <category name="org.apache.ignite.cache.msg">
@@ -114,7 +124,7 @@
     <!-- Default settings. -->
     <root>
         <!-- Print out all debug by default. -->
-        <level value="INFO"/>
+        <level value="DEBUG"/>
 
         <!-- Append to file and console. -->
         <appender-ref ref="FILE"/>

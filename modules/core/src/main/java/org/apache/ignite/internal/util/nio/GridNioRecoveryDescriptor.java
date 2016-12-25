@@ -256,6 +256,8 @@ public class GridNioRecoveryDescriptor {
      */
     public boolean reserve() throws InterruptedException {
         synchronized (this) {
+            log.info("!!! reserve connected=" + connected + ", reserved=" + reserved);
+
             while (!connected && reserved)
                 wait();
 
@@ -264,6 +266,8 @@ public class GridNioRecoveryDescriptor {
 
                 reserveCnt++;
             }
+
+            log.info("!!! reserve ret " + !connected);
 
             return !connected;
         }
@@ -312,6 +316,8 @@ public class GridNioRecoveryDescriptor {
         GridNioFuture<?>[] futs = null;
 
         synchronized (this) {
+            log.info("!!! release connected=" + connected + ", reserved=" + reserved);
+
             connected = false;
 
             if (handshakeReq != null) {
@@ -347,8 +353,12 @@ public class GridNioRecoveryDescriptor {
      */
     public boolean tryReserve(long id, IgniteInClosure<Boolean> c) {
         synchronized (this) {
+            log.info("!!! tryReserve connected=" + connected + ", reserved=" + reserved);
+
             if (connected) {
                 c.apply(false);
+
+                log.info("!!! tryReserve ret false");
 
                 return false;
             }
@@ -376,12 +386,16 @@ public class GridNioRecoveryDescriptor {
                 else
                     handshakeReq = new IgniteBiTuple<>(id, c);
 
+                log.info("!!! tryReserve ret false");
+
                 return false;
             }
             else {
                 reserved = true;
 
                 reserveCnt++;
+
+                log.info("!!! tryReserve ret true");
 
                 return true;
             }

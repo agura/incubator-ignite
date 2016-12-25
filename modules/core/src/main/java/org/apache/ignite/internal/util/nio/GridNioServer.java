@@ -1957,6 +1957,9 @@ public class GridNioServer<T> {
 
                 GridNioRecoveryDescriptor recovery = ses.recoveryDescriptor();
 
+                if (log.isDebugEnabled())
+                    log.debug("!!! nioSrv.close and recovery.release recovery=" + recovery);
+
                 if (recovery != null) {
                     try {
                         // Poll will update recovery data.
