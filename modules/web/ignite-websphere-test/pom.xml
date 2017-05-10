@@ -30,7 +30,7 @@
 
     <artifactId>ignite-websphere-test</artifactId>
     <packaging>war</packaging>
-    <version>1.8.5</version>
+    <version>1.8.5-quartz</version>
     <url>http://ignite.apache.org</url>
 
     <dependencies>

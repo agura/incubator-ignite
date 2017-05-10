@@ -31,7 +31,7 @@
     </parent>
 
     <artifactId>ignite-schema-import-db</artifactId>
-    <version>1.8.5</version>
+    <version>1.8.5-quartz</version>
 
     <dependencies>
         <dependency>

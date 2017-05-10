@@ -35,7 +35,7 @@
     </properties>
 
     <artifactId>ignite-schema-import-demo</artifactId>
-    <version>1.8.5</version>
+    <version>1.8.5-quartz</version>
 
     <dependencies>
         <dependency>
