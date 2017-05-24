@@ -1274,6 +1274,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                         tx.subjectId(),
                         tx.taskNameHash(),
                         tx.activeCachesDeploymentEnabled(),
+                        tx.storeWriteThrough(),
                         retVal);
 
                     int idx = 0;
@@ -1386,6 +1387,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                             tx.subjectId(),
                             tx.taskNameHash(),
                             tx.activeCachesDeploymentEnabled(),
+                            tx.storeWriteThrough(),
                             retVal);
 
                         for (IgniteTxEntry entry : nearMapping.entries()) {

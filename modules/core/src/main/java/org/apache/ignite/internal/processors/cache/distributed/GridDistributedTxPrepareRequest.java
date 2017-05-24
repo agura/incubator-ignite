@@ -75,6 +75,9 @@ public class GridDistributedTxPrepareRequest extends GridDistributedBaseMessage 
     /** */
     private static final int SYSTEM_TX_FLAG_MASK = 0x10;
 
+    /** */
+    public static final int STORE_USED_FLAG_MASK = 0x20;
+
     /** Collection to message converter. */
     private static final C1<Collection<UUID>, UUIDCollectionMessage> COL_TO_MSG = new C1<Collection<UUID>, UUIDCollectionMessage>() {
         @Override public UUIDCollectionMessage apply(Collection<UUID> uuids) {
@@ -230,6 +233,23 @@ public class GridDistributedTxPrepareRequest extends GridDistributedBaseMessage 
      */
     public final boolean system() {
         return isFlag(SYSTEM_TX_FLAG_MASK);
+    }
+
+    /**
+     * @return Flag indicating whether transaction use cache store.
+     */
+    public boolean storeUsed() {
+        return (flags & STORE_USED_FLAG_MASK) != 0;
+    }
+
+    /**
+     * @param storeUsed Store used value.
+     */
+    public void storeUsed(boolean storeUsed) {
+        if (storeUsed)
+            flags = (byte)(flags | STORE_USED_FLAG_MASK);
+        else
+            flags &= ~STORE_USED_FLAG_MASK;
     }
 
     /**
