@@ -1404,8 +1404,12 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             synchronized (this) {
                 Integer cur = locked.get(absIdx);
 
+<<<<<<< HEAD
                 assert cur != null && cur > 0 : "WAL Segment with Index " + absIdx + " is not locked;" +
                     " lastAbsArchivedIdx = " + lastAbsArchivedIdx;
+=======
+                assert cur != null && cur > 0 : "cur=" + cur + ", absIdx=" + absIdx;
+>>>>>>> ignite-6339 Segmented ring buffer implemented instead of WAL records chain
 
                 if (cur == 1) {
                     locked.remove(absIdx);
@@ -2176,6 +2180,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             for (;;) {
                 checkEnvironment();
+<<<<<<< HEAD
 
                 SegmentedRingByteBuffer.WriteSegment seg = ringBuf.offer(rec.size());
 
@@ -2196,6 +2201,28 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
                         fillBuffer(buf, rec);
 
+=======
+
+                SegmentedRingByteBuffer.WriteSegment seg = ringBuf.offer(rec.size());
+
+                FileWALPointer ptr = null;
+
+                if (seg != null) {
+                    try {
+                        int pos = (int)(seg.position() - rec.size());
+
+                        ByteBuffer buf = seg.buffer();
+
+                        if (buf == null || stop.get())
+                            return null; // Can not write to this segment, need to switch to the next one.
+
+                        ptr = new FileWALPointer(idx, pos, rec.size());
+
+                        rec.position(ptr);
+
+                        fillBuffer(buf, rec);
+
+>>>>>>> ignite-6339 Segmented ring buffer implemented instead of WAL records chain
                         return ptr;
                     }
                     finally {
