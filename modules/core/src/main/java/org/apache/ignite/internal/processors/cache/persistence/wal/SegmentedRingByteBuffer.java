@@ -19,13 +19,18 @@ package org.apache.ignite.internal.processors.cache.persistence.wal;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import sun.nio.ch.DirectBuffer;
+
+import static org.apache.ignite.internal.processors.cache.persistence.wal.SegmentedRingByteBuffer.BufferMode.DIRECT;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.SegmentedRingByteBuffer.BufferMode.MAPPED;
 
 /**
  * Segmented ring byte buffer that represents multi producer/single consumer queue that can be used by multiple writer
@@ -42,10 +47,10 @@ public class SegmentedRingByteBuffer {
     private final int cap;
 
     /** Direct. */
-    private final boolean direct;
+    private final BufferMode mode;
 
     /** Buffer. */
-    private final ByteBuffer buf;
+    public final ByteBuffer buf;
 
     /** Max segment size. */
     private final long maxSegmentSize;
@@ -72,14 +77,27 @@ public class SegmentedRingByteBuffer {
      *
      * @param cap Buffer's capacity.
      * @param maxSegmentSize Max segment size.
-     * @param direct Direct byte buffer.
+     * @param mode Buffer mode.
      */
-    public SegmentedRingByteBuffer(int cap, long maxSegmentSize, boolean direct) {
+    public SegmentedRingByteBuffer(int cap, long maxSegmentSize, BufferMode mode) {
+        A.ensure(mode != MAPPED, "Mapped byte buffer isn't allowed.");
+        A.notNull(mode, "mode");
+
         this.cap = cap;
-        this.direct = direct;
-        this.buf = direct ? ByteBuffer.allocateDirect(cap) : ByteBuffer.allocate(cap);
+        this.mode = mode;
+        this.buf = mode == DIRECT ? ByteBuffer.allocateDirect(cap) : ByteBuffer.allocate(cap);
         this.buf.order(ByteOrder.nativeOrder());
         this.maxSegmentSize = maxSegmentSize;
+    }
+
+    public SegmentedRingByteBuffer(MappedByteBuffer buf) {
+        A.notNull(buf, "mode");
+
+        this.mode = MAPPED;
+        this.cap = buf.capacity();
+        this.buf = buf;
+        this.buf.order(ByteOrder.nativeOrder());
+        this.maxSegmentSize = buf.capacity();
     }
 
     /**
@@ -281,8 +299,10 @@ public class SegmentedRingByteBuffer {
      * Frees allocated memory in case of direct byte buffer.
      */
     public void free() {
-        if (direct)
+        if (mode == DIRECT)
             ((DirectBuffer)buf).cleaner().clean();
+        else if (mode == MAPPED)
+            ((MappedByteBuffer)buf).force();
     }
 
     /**
@@ -316,6 +336,8 @@ public class SegmentedRingByteBuffer {
      * @param len Length.
      */
     private void copy(ByteBuffer src, int srcPos, ByteBuffer dest, int destPos, int len) {
+        assert mode != MAPPED;
+
         if (buf.isDirect()) {
             ByteBuffer src0 = src.duplicate();
             src0.limit(srcPos + len);
@@ -472,5 +494,9 @@ public class SegmentedRingByteBuffer {
         @Override public String toString() {
             return S.toString(ReadSegment.class, this, "super", super.toString());
         }
+    }
+
+    public enum BufferMode {
+        ONHEAP, DIRECT, MAPPED
     }
 }

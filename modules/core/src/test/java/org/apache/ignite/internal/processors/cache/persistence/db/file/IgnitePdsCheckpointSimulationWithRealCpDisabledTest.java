@@ -134,7 +134,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
-        deleteWorkFiles();
+        //deleteWorkFiles();
     }
 
     /**
