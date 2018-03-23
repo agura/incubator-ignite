@@ -65,6 +65,10 @@ public abstract class IgniteAbstractBenchmark extends BenchmarkDriverAdapter {
 
         IgniteLogger log = ignite().log();
 
+        ignite().cluster().active(true);
+
+        log.info("CLUSTER ACTIVE");
+
         if (log.isInfoEnabled())
             log.info("Benchmark arguments: " + args);
     }

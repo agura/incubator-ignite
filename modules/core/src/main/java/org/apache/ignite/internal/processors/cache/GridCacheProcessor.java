@@ -2346,10 +2346,14 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             pageStoreMgr = new FilePageStoreManager(ctx);
 
-            if (ctx.config().getDataStorageConfiguration().getWalMode() == WALMode.FSYNC && !walFsyncWithDedicatedWorker)
+            if (/*ctx.config().getDataStorageConfiguration().getWalMode() == WALMode.FSYNC && */!walFsyncWithDedicatedWorker)
                 walMgr = new FsyncModeFileWriteAheadLogManager(ctx);
             else
                 walMgr = new FileWriteAheadLogManager(ctx);
+
+            log.info("WALINFO: \nwalMgr=" + walMgr.getClass().getSimpleName() +
+                "\n------> walMode=" + ctx.config().getDataStorageConfiguration().getWalMode() +
+                "\n------> mmap=" + IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_WAL_MMAP, true));
         }
         else
             dbMgr = new IgniteCacheDatabaseSharedManager();
